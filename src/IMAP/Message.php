@@ -303,7 +303,6 @@ class Message {
      */
     private function parseBody() {
         $structure = imap_fetchstructure($this->client->connection, $this->uid, FT_UID);
-
         $this->fetchStructure($structure);
     }
 
@@ -314,6 +313,7 @@ class Message {
      * @param mixed $partNumber
      */
     private function fetchStructure($structure, $partNumber = null) {
+
         if ($structure->type == self::TYPE_TEXT) {
             if ($structure->subtype == "PLAIN") {
                 if (!$partNumber) {
@@ -350,6 +350,12 @@ class Message {
                 $body->content = $content;
 
                 $this->bodies['html'] = $body;
+            } elseif ($structure->subtype == "CSV") {                
+
+                if (!$partNumber) {
+                    $partNumber = 1;
+                }
+                $this->fetchAttachment($structure, $partNumber);
             }
         } elseif ($structure->type == self::TYPE_MULTIPART) {
             foreach ($structure->parts as $index => $subStruct) {
@@ -411,7 +417,7 @@ class Message {
         $attachment->name = false;
         if (property_exists($structure, 'dparameters')) {
             foreach ($structure->dparameters as $parameter) {
-                if ($parameter->attribute == "filename") {
+                if (strtolower($parameter->attribute) == "filename") {
                     $attachment->name = $parameter->value;
                     break;
                 }
@@ -420,7 +426,7 @@ class Message {
 
         if (!$attachment->name && property_exists($structure, 'parameters')) {
             foreach ($structure->parameters as $parameter) {
-                if ($parameter->attribute == "name") {
+                if (strtolower($parameter->attribute) == "name") {
                     $attachment->name = $parameter->value;
                     break;
                 }
